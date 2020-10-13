@@ -26,73 +26,136 @@ const exposes = fs
     return exposes;
   }, {});
 
-module.exports = {
-  entry: './index.ts',
-  resolve: {
-    extensions: ['.ts', '.tsx', '.js'],
-  },
-  output: {
-    publicPath: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${process.env.S3_BUCKET_KEY}/`,
-  },
-  module: {
-    rules: [
-      {
-        test: /bootstrap\.tsx$/,
-        loader: 'bundle-loader',
-        options: {
-          lazy: true,
-        },
-      },
-      {
-        test: /\.tsx?$/,
-        loader: 'babel-loader',
-        options: {
-          presets: ['@babel/preset-react', '@babel/preset-typescript'],
-        },
-      },
-      {
-        test: /\.scss$/,
-        use: [
-          { loader: 'style-loader' },
-          {
-            loader: 'css-loader',
-            options: {
-              modules: {
-                localIdentName: '[local]_[hash:base64:5]',
-              },
-              sourceMap: true,
-            },
-          },
-          {
-            loader: 'sass-loader',
-            options: {
-              sourceMap: true,
-            },
-          },
-        ],
-      },
+const CONFIG_MODE = {
+  development: {
+    sourceMap: true,
+    publicPath: '/',
+    devtool: 'inline-source-map',
+    plugins: [
+      new webpack.SourceMapDevToolPlugin({
+        filename: null,
+        exclude: [/node_modules/],
+        test: /\.ts($|\?)/i,
+      }),
     ],
   },
-  devtool: 'inline-source-map',
-  plugins: [
-    new webpack.SourceMapDevToolPlugin({
-      filename: null,
-      exclude: [/node_modules/],
-      test: /\.ts($|\?)/i,
-    }),
-    new webpack.DefinePlugin({
-      'process.env': JSON.stringify(dotenv.config().parsed),
-    }),
-    new CleanWebpackPlugin(),
-    new ModuleFederationPlugin({
-      name: packageName,
-      library: { type: 'var', name: packageToLibrary(packageName) },
-      filename: 'remoteEntry.js',
-      exposes: exposes,
-      shared: ['react', 'react-dom'],
-    }),
-  ],
-  devServer: {
-    historyApiFallback: true,
+  production: {
+    sourceMap: false,
+    publicPath: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${process.env.S3_BUCKET_KEY}/`,
+    plugins: [],
   },
+};
+
+module.exports = (env, options) => {
+  const mode = options.mode;
+
+  return {
+    entry: './src/index.tsx',
+    resolve: {
+      extensions: ['.ts', '.tsx', '.js'],
+    },
+    output: {
+      filename: '[name].bundle.js',
+      path: path.resolve(__dirname, 'dist'),
+      chunkFilename: '[name].bundle.js',
+      publicPath: CONFIG_MODE[mode].publicPath,
+    },
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          react: {
+            test: /[\/]node_modules[\/](react|react-dom|react-redux|redux)[\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 99,
+          },
+          component: {
+            test: /[\/]node_modules[\/]@khanhnguyen234[\/]react-components[\/]/,
+            name: 'khanhnguyen234-components',
+            chunks: 'all',
+            priority: 98,
+          },
+          'vendors-async': {
+            reuseExistingChunk: true,
+            chunks: 'async',
+            priority: -10,
+          },
+          default: { priority: -30 },
+        },
+      },
+    },
+    module: {
+      rules: [
+        {
+          test: /bootstrap\.tsx$/,
+          loader: 'bundle-loader',
+          options: {
+            lazy: true,
+          },
+        },
+        {
+          test: /\.tsx?$/,
+          use: [
+            {
+              loader: 'babel-loader',
+              options: {
+                presets: ['@babel/preset-react', '@babel/preset-typescript'],
+                plugins: ['transform-class-properties'],
+              },
+            },
+          ],
+        },
+        {
+          test: /\.scss$/,
+          use: [
+            { loader: 'style-loader' },
+            {
+              loader: 'css-loader',
+              options: {
+                modules: {
+                  localIdentName: '[local]_[hash:base64:5]',
+                },
+                sourceMap: CONFIG_MODE[mode].sourceMap,
+              },
+            },
+            {
+              loader: 'sass-loader',
+              options: {
+                sourceMap: CONFIG_MODE[mode].sourceMap,
+              },
+            },
+          ],
+        },
+        {
+          test: /\.icon\.svg$/,
+          loader: '@svgr/webpack',
+          options: {
+            icon: true,
+          },
+        },
+      ],
+    },
+    devtool: CONFIG_MODE[mode].devtool,
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: './src/index.html',
+        headScripts: [],
+      }),
+      new webpack.DefinePlugin({
+        'process.env': JSON.stringify(dotenv.config().parsed),
+      }),
+      new CleanWebpackPlugin(),
+      new ModuleFederationPlugin({
+        name: packageName,
+        library: { type: 'var', name: packageToLibrary(packageName) },
+        filename: 'remoteEntry.js',
+        exposes: exposes,
+        // shared: ['react', 'react-dom'],
+      }),
+    ].concat(CONFIG_MODE[mode].plugins),
+    devServer: {
+      historyApiFallback: true,
+    },
+  };
 };
