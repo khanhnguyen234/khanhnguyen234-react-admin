@@ -7,6 +7,7 @@ const WorkboxPlugin = require('workbox-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const { ModuleFederationPlugin } = require('webpack').container;
 const packageName = require('./package.json').name;
+const deps = require('./package.json').dependencies;
 
 const env = dotenv.config().parsed;
 const envKeys = Object.keys(env).reduce((prev, next) => {
@@ -26,10 +27,12 @@ const exposes = fs
     return exposes;
   }, {});
 
+console.log('=====  EXPOSES  =====');
+console.log(exposes);
+
 const CONFIG_MODE = {
   development: {
     sourceMap: true,
-    publicPath: '/',
     devtool: 'inline-source-map',
     plugins: [
       new webpack.SourceMapDevToolPlugin({
@@ -41,7 +44,6 @@ const CONFIG_MODE = {
   },
   production: {
     sourceMap: false,
-    publicPath: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${process.env.S3_BUCKET_KEY}/`,
     plugins: [],
   },
 };
@@ -58,7 +60,7 @@ module.exports = (env, options) => {
       filename: '[name].bundle.js',
       path: path.resolve(__dirname, 'dist'),
       chunkFilename: '[name].bundle.js',
-      publicPath: CONFIG_MODE[mode].publicPath,
+      publicPath: process.env.PUBLIC_PATH,
     },
     optimization: {
       splitChunks: {
@@ -87,6 +89,12 @@ module.exports = (env, options) => {
     },
     module: {
       rules: [
+        {
+          test: /\.m?js/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
         {
           test: /bootstrap\.tsx$/,
           loader: 'bundle-loader',
@@ -151,7 +159,18 @@ module.exports = (env, options) => {
         library: { type: 'var', name: packageToLibrary(packageName) },
         filename: 'remoteEntry.js',
         exposes: exposes,
-        // shared: ['react', 'react-dom'],
+        shared: {
+          ...deps,
+          react: {
+            singleton: true,
+          },
+          'react-dom': {
+            singleton: true,
+          },
+          'react-redux': {
+            singleton: true,
+          },
+        },
       }),
     ].concat(CONFIG_MODE[mode].plugins),
     devServer: {

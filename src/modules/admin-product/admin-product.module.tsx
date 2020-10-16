@@ -1,17 +1,21 @@
 import * as React from 'react';
 import PWAModule from '@khanhnguyen234/react-core/src/pwa-module';
-import _s2 from './product-detail.component';
+import _data from './dataSrc';
+import _s2 from './admin-product.component';
 
 function Placeholder() {
-  return <div>SubModule placeholder</div>;
+  return <div>Placeholder</div>;
 }
 
 const Module = new PWAModule({
-  name: 'ProductDetailModule',
+  name: 'AdminProductModule',
   placeholder: Placeholder,
   factory: async (ctx) => {
-    const [_s2] = (
-      await Promise.allSettled([import('./product-detail.component')])
+    const [_data, _s2] = (
+      await Promise.allSettled([
+        import('./dataSrc'),
+        import('./admin-product.component'),
+      ])
     ).map((pwaModule) => {
       pwaModule.status === 'rejected' && console.error(pwaModule.reason);
       return pwaModule.status === 'fulfilled' ? pwaModule.value.default : null;
@@ -21,6 +25,7 @@ const Module = new PWAModule({
       named: {},
       routing: [],
       subs: [],
+      data: [_data],
     };
   },
 });
