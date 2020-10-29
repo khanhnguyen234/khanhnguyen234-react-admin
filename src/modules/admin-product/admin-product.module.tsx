@@ -1,5 +1,5 @@
 import * as React from 'react';
-import PWAModule from '@khanhnguyen234/react-core/src/pwa-module';
+import MicroModule from '@khanhnguyen234/react-core/src/micro-module';
 import _data from './dataSrc';
 import _s2 from './admin-product.component';
 
@@ -7,7 +7,7 @@ function Placeholder() {
   return <div>Placeholder</div>;
 }
 
-const Module = new PWAModule({
+const Module = new MicroModule({
   name: 'AdminProductModule',
   placeholder: Placeholder,
   factory: async (ctx) => {
@@ -16,9 +16,11 @@ const Module = new PWAModule({
         import('./dataSrc'),
         import('./admin-product.component'),
       ])
-    ).map((pwaModule) => {
-      pwaModule.status === 'rejected' && console.error(pwaModule.reason);
-      return pwaModule.status === 'fulfilled' ? pwaModule.value.default : null;
+    ).map((microModule) => {
+      microModule.status === 'rejected' && console.error(microModule.reason);
+      return microModule.status === 'fulfilled'
+        ? microModule.value.default
+        : null;
     });
     return {
       layout: _s2,

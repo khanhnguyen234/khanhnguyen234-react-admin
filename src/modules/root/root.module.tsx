@@ -1,5 +1,5 @@
 import * as React from 'react';
-import PWAModule from '@khanhnguyen234/react-core/src/pwa-module';
+import MicroModule from '@khanhnguyen234/react-core/src/micro-module';
 import RootComponent from './root.component';
 import { INTERNAL_URLS } from '@khanhnguyen234/react-common/src/lib/const';
 
@@ -7,7 +7,7 @@ function Placeholder() {
   return <div>HomeModule placeholder</div>;
 }
 
-const Module = new PWAModule({
+const Module = new MicroModule({
   name: 'RootAdmin',
   placeholder: Placeholder,
   factory: async (ctx) => {
